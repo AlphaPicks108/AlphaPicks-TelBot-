@@ -23,8 +23,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
+      - name: Check if Script Exists
+        run: |
+          if [ ! -f "./scripts/fetch_cj_products.py" ]; then
+            echo "Error: fetch_cj_products.py not found in scripts/ directory!"
+            exit 1
+          fi
+
       - name: Run Fetch Script
         env:
-          API_URL: ${{ secrets.CJ_API_URL }}  # Set in GitHub Secrets
-          API_KEY: ${{ secrets.CJ_API_KEY }}  # Set in GitHub Secrets
-        run: python fetch_cj_products.py
+          API_URL: ${{ secrets.CJ_API_URL }}
+          API_KEY: ${{ secrets.CJ_API_KEY }}
+        run: python scripts/fetch_cj_products.py
