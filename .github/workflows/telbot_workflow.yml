@@ -1,30 +1,30 @@
-name: Run TelBot Every 4 Hours
+name: Fetch CJ Products
 
 on:
   schedule:
-    - cron: "0 */4 * * *"  # Runs every 4 hours
-  workflow_dispatch:  # Allows manual execution
+    - cron: "0 * * * *"  # Runs every hour
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
-  run-telbot:
+  fetch-products:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - name: Install Dependencies
         run: |
-          echo "No requirements.txt found, installing manually..."
-          pip install requests python-telegram-bot
+          python -m pip install --upgrade pip
+          pip install requests
 
-      - name: Run TelBot
+      - name: Run Fetch Script
         env:
-          CJ_API_KEY: ${{ secrets.CJ_API_KEY }}
-          TELBOT_TOKEN: ${{ secrets.TELBOT_TOKEN }}
-        run: python telbot.py
+          API_URL: ${{ secrets.CJ_API_URL }}  # Set in GitHub Secrets
+          API_KEY: ${{ secrets.CJ_API_KEY }}  # Set in GitHub Secrets
+        run: python fetch_cj_products.py
