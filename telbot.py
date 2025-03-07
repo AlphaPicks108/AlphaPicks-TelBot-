@@ -4,82 +4,87 @@ import time
 import logging
 from telegram import Bot
 
-# Load Secrets
+# Load secrets from GitHub Actions
+TELBOT_TOKEN = os.getenv("TELBOT_TOKEN")  # Telegram Bot Token
 CJ_API_KEY = os.getenv("CJ_API_KEY")  # CJ Dropshipping API Key
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN_TELBOT")  # TelBot Token
-TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")  # Telegram Channel ID
+CHANNEL_ID = "-1002268570632"  # Replace with your actual Telegram Channel ID
 
-# Setup Logging
-logging.basicConfig(level=logging.INFO)
-
-# Initialize Telegram Bot
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # CJ API Endpoints
 CJ_PRODUCT_LIST_URL = "https://developers.cjdropshipping.com/api2.0/v1/product/list"
+CJ_FREIGHT_CALCULATE_URL = "https://developers.cjdropshipping.com/api2.0/v1/logistic/freightCalculate"
 
-# Pricing Formula
-MIN_PROFIT = 1500  # Minimum profit threshold
+# Initialize Telegram Bot
+bot = Bot(token=TELBOT_TOKEN)
 
-def fetch_products(category_id, limit=5):
-    """Fetch 5 products from CJ Dropshipping for a specific category"""
-    headers = {"CJ-Access-Token": CJ_API_KEY}
-    params = {
-        "pageNum": 1,
-        "pageSize": limit,
-        "categoryId": category_id
-    }
+def fetch_products():
+    """
+    Fetch products from CJ Dropshipping API.
+    """
+    headers = {"CJ-Access-Token": CJ_API_KEY, "Content-Type": "application/json"}
+    params = {"pageSize": 5, "pageNum": 1}  # Fetch 5 products per request
     response = requests.get(CJ_PRODUCT_LIST_URL, headers=headers, params=params)
 
     if response.status_code == 200:
         data = response.json()
-        return data.get("data", {}).get("list", [])
+        if data["code"] == 200:
+            return data["data"]["list"]
+        else:
+            logging.error(f"Error from CJ API: {data['message']}")
     else:
-        logging.error(f"Error fetching products: {response.text}")
-        return []
-
-def calculate_price(cj_cost, market_price):
-    """Calculate selling price using the pricing formula"""
-    profit = market_price - cj_cost
-    return market_price if profit >= MIN_PROFIT else None
+        logging.error(f"Failed to fetch products. Status code: {response.status_code}")
+    return []
 
 def format_product_message(product):
-    """Format product details for Telegram"""
-    title = product["name"]
-    images = product["imageList"]
-    price = product["sellPrice"]
-    url = product["url"]
+    """
+    Format product details into a Telegram-friendly message.
+    """
+    name = product.get("nameEn", "No Name")
+    price = float(product.get("sellPrice", 0))  # Selling price from CJ
+    images = product.get("imageUrlList", [])
+    product_id = product.get("productId", "Unknown")
 
-    message = (
-        f"📌 **{title}**\n"
-        f"💰 **Price:** ₹{price}\n"
-        f"🔗 [Buy Now]({url})\n"
-        f"🚫 *Non-Returnable*"
-    )
+    # Pricing formula
+    market_price = price - 1500 if price >= 1500 else None
+    if market_price is None:
+        return None  # Skip the product if price condition is not met
+
+    message = f"""
+🛒 **{name}**  
+💰 **Price:** ₹{market_price}  
+🚚 **Non-Returnable**  
+
+🔗 **[View Product](https://cjdropshipping.com/product-detail.html?productId={product_id})**
+    """
     return message, images
 
-def post_to_telegram(product):
-    """Post product details to the Telegram channel"""
-    message, images = format_product_message(product)
+def post_to_telegram():
+    """
+    Fetches products, formats them, and posts to Telegram.
+    """
+    products = fetch_products()
+    if not products:
+        logging.info("No products fetched.")
+        return
 
-    # Send product details
-    bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message, parse_mode="Markdown")
+    for product in products:
+        message_data = format_product_message(product)
+        if not message_data:
+            continue
 
-    # Send images (Telegram only supports sending one image at a time with caption)
-    if images:
-        bot.send_photo(chat_id=TELEGRAM_CHANNEL_ID, photo=images[0])
-
-def main():
-    """Fetch and post 5 products per category every 4 hours"""
-    categories = ["12345", "67890"]  # Replace with actual CJ category IDs
-    for category in categories:
-        products = fetch_products(category)
-        for product in products:
-            price = calculate_price(product["sellPrice"], product["marketPrice"])
-            if price:
-                post_to_telegram(product)
-            time.sleep(3)  # Avoid API spam
-        time.sleep(5)  # Delay between categories
+        message, images = message_data
+        try:
+            if images:
+                bot.send_photo(chat_id=CHANNEL_ID, photo=images[0], caption=message, parse_mode="Markdown")
+            else:
+                bot.send_message(chat_id=CHANNEL_ID, text=message, parse_mode="Markdown")
+            time.sleep(2)  # Avoid spam rate limits
+        except Exception as e:
+            logging.error(f"Error posting to Telegram: {e}")
 
 if __name__ == "__main__":
-    main()
+    logging.info("Starting TelBot...")
+    post_to_telegram()
+    logging.info("TelBot execution completed.")
