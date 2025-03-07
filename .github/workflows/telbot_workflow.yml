@@ -23,15 +23,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Check if Script Exists
-        run: |
-          if [ ! -f "./scripts/fetch_cj_products.py" ]; then
-            echo "Error: fetch_cj_products.py not found in scripts/ directory!"
-            exit 1
-          fi
+      - name: Debug - Check Files
+        run: ls -R  # List all files in the runner to check if fetch_cj_products.py exists
 
       - name: Run Fetch Script
         env:
           API_URL: ${{ secrets.CJ_API_URL }}
           API_KEY: ${{ secrets.CJ_API_KEY }}
-        run: python scripts/fetch_cj_products.py
+        run: |
+          if [ -f "fetch_cj_products.py" ]; then
+            python fetch_cj_products.py
+          elif [ -f "scripts/fetch_cj_products.py" ]; then
+            python scripts/fetch_cj_products.py
+          elif [ -f "src/fetch_cj_products.py" ]; then
+            python src/fetch_cj_products.py
+          else
+            echo "Error: fetch_cj_products.py not found!"
+            exit 1
+          fi
