@@ -1,15 +1,27 @@
 import logging
 import requests
+import telebot
+import os
+
+# Load environment variables
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+API_URL = os.getenv("CJ_API_URL")  # CJ API URL from environment variables
+API_KEY = os.getenv("CJ_API_KEY")  # CJ API Key
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def fetch_cj_products(api_url, headers):
+# Initialize bot
+bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
+
+# Function to fetch CJ products
+def fetch_cj_products():
+    headers = {"Authorization": f"Bearer {API_KEY}"}
+    
     try:
-        response = requests.get(api_url, headers=headers)
+        response = requests.get(API_URL, headers=headers)
         response_json = response.json()
 
-        # Check if API call was successful
         if response_json["code"] == 200 and response_json.get("success"):
             product_list = response_json["data"]["list"] if "data" in response_json and "list" in response_json["data"] else []
             if product_list:
@@ -29,13 +41,18 @@ def fetch_cj_products(api_url, headers):
         logging.error(f"Unexpected error: {e}")
         return []
 
-# Run the function
-API_URL = "https://your-cj-api-url.com"  # Change this after the first run
-HEADERS = {"Authorization": "Bearer YOUR_API_KEY"}  # Change this after the first run
+# Telegram command to fetch CJ products
+@bot.message_handler(commands=["products"])
+def send_products(message):
+    products = fetch_cj_products()
+    
+    if products:
+        response_text = "\n".join([f"{p.get('productNameEn', 'N/A')} - ${p.get('sellPrice', 'N/A')}" for p in products[:5]])
+        bot.send_message(message.chat.id, f"🛒 Here are some CJ products:\n\n{response_text}")
+    else:
+        bot.send_message(message.chat.id, "No products found.")
 
-products = fetch_cj_products(API_URL, HEADERS)
-if products:
-    for product in products:
-        print(f"Product Name: {product.get('productNameEn', 'N/A')}, Price: {product.get('sellPrice', 'N/A')}")
-else:
-    print("No products available.")
+# Start bot polling
+if __name__ == "__main__":
+    logging.info("Bot is running...")
+    bot.polling()
