@@ -1,82 +1,41 @@
-import os
 import logging
 import requests
-import telegram
-from telegram import InputMediaPhoto
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Load Secrets
-CJ_API_KEY = os.getenv("CJ_API_KEY")  # CJ Dropshipping API Key
-TELEGRAM_BOT_TOKEN = os.getenv("TELBOT_TOKEN")  # Telegram Bot Token
-TELEGRAM_CHANNEL_ID = "your_channel_id_here"  # Replace with actual channel ID
+def fetch_cj_products(api_url, headers):
+    try:
+        response = requests.get(api_url, headers=headers)
+        response_json = response.json()
 
-# API Endpoints
-CJ_PRODUCT_LIST_URL = "https://developers.cjdropshipping.com/api2.0/v1/product/list"
-
-# Initialize Telegram Bot
-bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
-
-
-def fetch_products():
-    """Fetches products from CJ Dropshipping API with enhanced debugging."""
-    headers = {"CJ-Access-Token": CJ_API_KEY}
-    params = {
-        "pageNum": 1,
-        "pageSize": 12,  # Increased from 5 to 12 as per the update
-        "type": 1,
-    }
-
-    response = requests.get(CJ_PRODUCT_LIST_URL, headers=headers, params=params)
-
-    if response.status_code == 200:
-        data = response.json()
-        logging.info(f"CJ API Response: {data}")  # <-- Print full response for debugging
-
-        if data.get("status") == 200 and "list" in data:
-            return data["list"]
+        # Check if API call was successful
+        if response_json["code"] == 200 and response_json.get("success"):
+            product_list = response_json["data"]["list"] if "data" in response_json and "list" in response_json["data"] else []
+            if product_list:
+                logging.info(f"Successfully fetched {len(product_list)} products from CJ API.")
+                return product_list
+            else:
+                logging.info("No products found in the CJ API response.")
+                return []
         else:
-            logging.error(f"Error from CJ API: {data.get('message')}")
+            logging.error(f"Error from CJ API: {response_json.get('message', 'Unknown Error')}")
             return []
-    else:
-        logging.error(f"Failed to fetch products. HTTP {response.status_code}")
+    
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Request error: {e}")
+        return []
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
         return []
 
+# Run the function
+API_URL = "https://your-cj-api-url.com"  # Change this after the first run
+HEADERS = {"Authorization": "Bearer YOUR_API_KEY"}  # Change this after the first run
 
-def send_to_telegram(products):
-    """Formats and sends fetched products to the Telegram channel."""
-    if not products:
-        logging.info("No products fetched.")
-        return
-
+products = fetch_cj_products(API_URL, HEADERS)
+if products:
     for product in products:
-        title = product.get("name", "No title")
-        price = product.get("sellPrice", "N/A")
-        link = product.get("detailUrl", "#")
-        images = product.get("imageUrls", [])
-
-        message = f"🛍 *{title}*\n💰 Price: {price} USD\n🔗 [View Product]({link})\n🚫 Non-Returnable"
-
-        media_group = []
-        if images:
-            for img in images[:5]:  # Limit to 5 images
-                media_group.append(InputMediaPhoto(media=img))
-
-            bot.send_media_group(chat_id=TELEGRAM_CHANNEL_ID, media=media_group)
-        
-        bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message, parse_mode="Markdown")
-
-
-def main():
-    """Main function to fetch products and send to Telegram."""
-    logging.info("Starting TelBot...")
-    
-    products = fetch_products()
-    send_to_telegram(products)
-
-    logging.info("TelBot execution completed.")
-
-
-if __name__ == "__main__":
-    main()
+        print(f"Product Name: {product.get('productNameEn', 'N/A')}, Price: {product.get('sellPrice', 'N/A')}")
+else:
+    print("No products available.")
