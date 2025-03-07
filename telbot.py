@@ -10,7 +10,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # Load secrets from environment variables
 CJ_API_KEY = os.getenv("CJ_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELBOT_TOKEN")
-TELEGRAM_CHANNEL_ID = os.getenv("TEL_CHANNEL_ID")
+
+# Hardcoded Telegram Channel ID
+TELEGRAM_CHANNEL_ID = "-1001234567890"  # Replace with your actual channel ID
 
 # CJ API Endpoint for fetching product list
 CJ_PRODUCT_LIST_URL = "https://developers.cjdropshipping.com/api2.0/v1/product/list"
@@ -72,3 +74,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
