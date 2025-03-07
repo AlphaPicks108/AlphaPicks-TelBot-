@@ -1,25 +1,25 @@
-name: Run TelBot
+name: Run TelBot Every 4 Hours
 
 on:
   schedule:
     - cron: "0 */4 * * *"  # Runs every 4 hours
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual execution
 
 jobs:
   run-telbot:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set Up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
-      - name: Install dependencies
-        run: pip install requests python-telegram-bot
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
 
       - name: Run TelBot
         env:
