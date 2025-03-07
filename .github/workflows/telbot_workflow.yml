@@ -3,26 +3,26 @@ name: Run TelBot
 on:
   schedule:
     - cron: "0 */4 * * *"  # Runs every 4 hours
-  workflow_dispatch:  # Allows manual trigger
+  workflow_dispatch:
 
 jobs:
-  run-bot:
+  run-telbot:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set Up Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: pip install requests python-telegram-bot
 
       - name: Run TelBot
         env:
-          TELBOT_TOKEN: ${{ secrets.TELBOT_TOKEN }}
           CJ_API_KEY: ${{ secrets.CJ_API_KEY }}
-        run: python telbot.py  # Ensure your bot script is named "telbot.py"
+          TELBOT_TOKEN: ${{ secrets.TELBOT_TOKEN }}
+        run: python telbot.py
