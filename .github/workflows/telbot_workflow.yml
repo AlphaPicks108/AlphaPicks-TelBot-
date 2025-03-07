@@ -13,6 +13,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Verify Script Exists
+        run: |
+          echo "Checking for fetch_cj_products.py..."
+          ls -R
+          if [ ! -f "fetch_cj_products.py" ] && [ ! -f "scripts/fetch_cj_products.py" ]; then
+            echo "❌ Error: fetch_cj_products.py not found in root or scripts/ directory!"
+            exit 1
+          fi
+
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
@@ -23,9 +32,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Debug - Check Files
-        run: ls -R  # List all files in the runner to check if fetch_cj_products.py exists
-
       - name: Run Fetch Script
         env:
           API_URL: ${{ secrets.CJ_API_URL }}
@@ -35,9 +41,7 @@ jobs:
             python fetch_cj_products.py
           elif [ -f "scripts/fetch_cj_products.py" ]; then
             python scripts/fetch_cj_products.py
-          elif [ -f "src/fetch_cj_products.py" ]; then
-            python src/fetch_cj_products.py
           else
-            echo "Error: fetch_cj_products.py not found!"
+            echo "❌ Error: fetch_cj_products.py not found!"
             exit 1
           fi
